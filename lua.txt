@@ -1,0 +1,352 @@
+
+-- ULTIMATE MOBILE GUI
+-- Roblox Studio > StarterPlayerScripts > LocalScript
+
+local Players = game:GetService("Players")
+local UIS = game:GetService("UserInputService")
+local RunService = game:GetService("RunService")
+
+local player = Players.LocalPlayer
+
+local gui = Instance.new("ScreenGui")
+gui.Name = "UltimateMobileGUI"
+gui.ResetOnSpawn = false
+gui.DisplayOrder = 100
+gui.Parent = player:WaitForChild("PlayerGui")
+
+local speed = 50
+local speedOn = false
+local jumpOn = false
+local clickOn = false
+local noclipOn = false
+
+local home1 = nil
+local home2 = nil
+
+-- MAIN WINDOW
+local frame = Instance.new("Frame")
+frame.Size = UDim2.new(0.78, 0, 0.65, 0)
+frame.Position = UDim2.new(0.05, 0, 0.15, 0)
+frame.BackgroundColor3 = Color3.fromRGB(13, 13, 24)
+frame.BorderSizePixel = 0
+frame.Active = true
+frame.Parent = gui
+
+local limit = Instance.new("UISizeConstraint")
+limit.MinSize = Vector2.new(210, 260)
+limit.MaxSize = Vector2.new(330, 500)
+limit.Parent = frame
+
+Instance.new("UICorner", frame).CornerRadius = UDim.new(0, 16)
+
+local outline = Instance.new("UIStroke", frame)
+outline.Color = Color3.fromRGB(145, 65, 255)
+outline.Thickness = 2
+
+-- HEADER
+local header = Instance.new("TextLabel")
+header.Size = UDim2.new(1, 0, 0, 45)
+header.BackgroundColor3 = Color3.fromRGB(65, 30, 130)
+header.Text = "ULTIMATE MOBILE  ≡"
+header.TextColor3 = Color3.new(1,1,1)
+header.TextSize = 16
+header.Font = Enum.Font.GothamBold
+header.Active = true
+header.Parent = frame
+
+Instance.new("UICorner", header).CornerRadius = UDim.new(0, 14)
+
+-- SCROLL MENU
+local scroll = Instance.new("ScrollingFrame")
+scroll.Size = UDim2.new(1, -12, 1, -55)
+scroll.Position = UDim2.new(0, 6, 0, 50)
+scroll.BackgroundTransparency = 1
+scroll.BorderSizePixel = 0
+scroll.ScrollBarThickness = 5
+scroll.ScrollBarImageColor3 = Color3.fromRGB(150, 70, 255)
+scroll.ScrollingDirection = Enum.ScrollingDirection.Y
+scroll.AutomaticCanvasSize = Enum.AutomaticSize.Y
+scroll.CanvasSize = UDim2.new(0, 0, 0, 0)
+scroll.Parent = frame
+
+local layout = Instance.new("UIListLayout")
+layout.Padding = UDim.new(0, 8)
+layout.SortOrder = Enum.SortOrder.LayoutOrder
+layout.Parent = scroll
+
+local order = 0
+
+local function makeButton(name, text)
+    order += 1
+
+    local b = Instance.new("TextButton")
+    b.Name = name
+    b.Size = UDim2.new(1, -8, 0, 40)
+    b.BackgroundColor3 = Color3.fromRGB(38, 35, 65)
+    b.TextColor3 = Color3.new(1,1,1)
+    b.Text = text
+    b.TextSize = 14
+    b.Font = Enum.Font.GothamBold
+    b.LayoutOrder = order
+    b.Parent = scroll
+
+    Instance.new("UICorner", b).CornerRadius = UDim.new(0, 9)
+
+    return b
+end
+
+local function setButton(b, name, state)
+    b.Text = name .. (state and ": ON" or ": OFF")
+    b.BackgroundColor3 = state
+        and Color3.fromRGB(35, 145, 95)
+        or Color3.fromRGB(38, 35, 65)
+end
+
+-- SPEED LABEL
+order += 1
+
+local speedLabel = Instance.new("TextLabel")
+speedLabel.Size = UDim2.new(1, -8, 0, 25)
+speedLabel.BackgroundTransparency = 1
+speedLabel.Text = "SPEED VALUE (MAX 10,000,000)"
+speedLabel.TextColor3 = Color3.fromRGB(190, 170, 255)
+speedLabel.TextSize = 13
+speedLabel.Font = Enum.Font.GothamBold
+speedLabel.LayoutOrder = order
+speedLabel.Parent = scroll
+
+-- SPEED INPUT
+order += 1
+
+local speedBox = Instance.new("TextBox")
+speedBox.Size = UDim2.new(1, -8, 0, 38)
+speedBox.BackgroundColor3 = Color3.fromRGB(35, 30, 55)
+speedBox.TextColor3 = Color3.new(1,1,1)
+speedBox.Text = "50"
+speedBox.TextSize = 16
+speedBox.LayoutOrder = order
+speedBox.Parent = scroll
+
+Instance.new("UICorner", speedBox).CornerRadius = UDim.new(0, 8)
+
+speedBox.FocusLost:Connect(function()
+    local n = tonumber(speedBox.Text)
+
+    if n then
+        speed = math.clamp(n, 16, 10000000)
+        speedBox.Text = tostring(speed)
+    else
+        speedBox.Text = tostring(speed)
+    end
+end)
+
+-- SPEED ON/OFF
+local speedBtn = makeButton("Speed", "SPEED: OFF")
+
+speedBtn.Activated:Connect(function()
+    speedOn = not speedOn
+    setButton(speedBtn, "SPEED", speedOn)
+end)
+
+-- INFINITY JUMP
+local jumpBtn = makeButton("Jump", "INFINITY JUMP: OFF")
+
+jumpBtn.Activated:Connect(function()
+    jumpOn = not jumpOn
+    setButton(jumpBtn, "INFINITY JUMP", jumpOn)
+end)
+
+UIS.JumpRequest:Connect(function()
+    if jumpOn then
+        local char = player.Character
+        local hum = char and char:FindFirstChildOfClass("Humanoid")
+
+        if hum then
+            hum:ChangeState(Enum.HumanoidStateType.Jumping)
+        end
+    end
+end)
+
+-- NOCLIP
+local noclipBtn = makeButton("Noclip", "NOCLIP: OFF")
+
+noclipBtn.Activated:Connect(function()
+    noclipOn = not noclipOn
+    setButton(noclipBtn, "NOCLIP", noclipOn)
+end)
+
+local originalCollision = {}
+
+RunService.Stepped:Connect(function()
+    local char = player.Character
+    if not char then return end
+
+    if noclipOn then
+        for _, part in ipairs(char:GetDescendants()) do
+            if part:IsA("BasePart") then
+                if originalCollision[part] == nil then
+                    originalCollision[part] = part.CanCollide
+                end
+                part.CanCollide = false
+            end
+        end
+    else
+        for part, original in pairs(originalCollision) do
+            if part.Parent then
+                part.CanCollide = original
+            end
+            originalCollision[part] = nil
+        end
+    end
+end)
+
+-- CLICK TELEPORT
+local clickBtn = makeButton("ClickTP", "CLICK TP: OFF")
+
+clickBtn.Activated:Connect(function()
+    clickOn = not clickOn
+    setButton(clickBtn, "CLICK TP", clickOn)
+end)
+
+local mouse = player:GetMouse()
+
+mouse.Button1Down:Connect(function()
+    if clickOn and not UIS:GetFocusedTextBox() then
+        local char = player.Character
+        local root = char and char:FindFirstChild("HumanoidRootPart")
+
+        if root and mouse.Hit then
+            root.CFrame = CFrame.new(mouse.Hit.Position + Vector3.new(0, 3, 0))
+        end
+    end
+end)
+
+-- HOME 1 SAVE
+local save1 = makeButton("SaveHome1", "SAVE HOME 1")
+
+save1.Activated:Connect(function()
+    local char = player.Character
+    local root = char and char:FindFirstChild("HumanoidRootPart")
+
+    if root then
+        home1 = root.CFrame
+        save1.Text = "HOME 1 SAVED!"
+    end
+end)
+
+-- HOME 1 TELEPORT
+local tp1 = makeButton("Home1", "TELEPORT HOME 1")
+
+tp1.Activated:Connect(function()
+    local char = player.Character
+    local root = char and char:FindFirstChild("HumanoidRootPart")
+
+    if root and home1 then
+        root.CFrame = home1
+    end
+end)
+
+-- HOME 2 SAVE
+local save2 = makeButton("SaveHome2", "SAVE HOME 2")
+
+save2.Activated:Connect(function()
+    local char = player.Character
+    local root = char and char:FindFirstChild("HumanoidRootPart")
+
+    if root then
+        home2 = root.CFrame
+        save2.Text = "HOME 2 SAVED!"
+    end
+end)
+
+-- HOME 2 TELEPORT
+local tp2 = makeButton("Home2", "TELEPORT HOME 2")
+
+tp2.Activated:Connect(function()
+    local char = player.Character
+    local root = char and char:FindFirstChild("HumanoidRootPart")
+
+    if root and home2 then
+        root.CFrame = home2
+    end
+end)
+
+-- DRAG FUNCTION
+local function makeDraggable(object, dragArea)
+    local dragging = false
+    local dragStart
+    local startPos
+
+    dragArea.InputBegan:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.Touch
+        or input.UserInputType == Enum.UserInputType.MouseButton1 then
+
+            dragging = true
+            dragStart = input.Position
+            startPos = object.Position
+        end
+    end)
+
+    UIS.InputChanged:Connect(function(input)
+        if dragging then
+            if input.UserInputType == Enum.UserInputType.Touch
+            or input.UserInputType == Enum.UserInputType.MouseMovement then
+
+                local delta = input.Position - dragStart
+
+                object.Position = UDim2.new(
+                    startPos.X.Scale,
+                    startPos.X.Offset + delta.X,
+                    startPos.Y.Scale,
+                    startPos.Y.Offset + delta.Y
+                )
+            end
+        end
+    end)
+
+    UIS.InputEnded:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.Touch
+        or input.UserInputType == Enum.UserInputType.MouseButton1 then
+            dragging = false
+        end
+    end)
+end
+
+-- MAIN WINDOW DRAG
+makeDraggable(frame, header)
+
+-- HIDE / SHOW BUTTON
+local hideBtn = Instance.new("TextButton")
+hideBtn.Size = UDim2.fromOffset(65, 45)
+hideBtn.Position = UDim2.new(0, 10, 0.85, 0)
+hideBtn.BackgroundColor3 = Color3.fromRGB(105, 45, 200)
+hideBtn.Text = "HIDE"
+hideBtn.TextColor3 = Color3.new(1,1,1)
+hideBtn.TextSize = 15
+hideBtn.Font = Enum.Font.GothamBold
+hideBtn.Active = true
+hideBtn.Parent = gui
+
+Instance.new("UICorner", hideBtn).CornerRadius = UDim.new(0, 12)
+
+hideBtn.Activated:Connect(function()
+    frame.Visible = not frame.Visible
+    hideBtn.Text = frame.Visible and "HIDE" or "SHOW"
+end)
+
+-- HIDE BUTTON DRAG
+makeDraggable(hideBtn, hideBtn)
+
+-- SPEED CONTROL
+RunService.Heartbeat:Connect(function()
+    if speedOn then
+        local char = player.Character
+        local hum = char and char:FindFirstChildOfClass("Humanoid")
+
+        if hum then
+            hum.WalkSpeed = speed
+        end
+    end
+end)
+
+print("ULTIMATE MOBILE GUI LOADED!")
